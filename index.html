@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aqua Pack - Water Delivery ERP System">
+    <title>Aqua Pack - Water Delivery ERP</title>
+    <!-- Favicon: water drop -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <script>
+        // Suppress Tailwind CDN production warning (app runs on GitHub Pages - CDN is intentional)
+        const _warn = console.warn;
+        console.warn = (...args) => { if (args[0]?.includes?.('cdn.tailwindcss.com')) return; _warn(...args); };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .nav-item.active { background-color: #0ea5e9; color: white; }
+        .input-field { background: #1e293b; border: 1px solid #334155; color: white; padding: 0.5rem; border-radius: 0.375rem; width: 100%; }
+        .input-field:focus { outline: none; border-color: #0ea5e9; }
+        .btn-primary { background: #0ea5e9; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary:hover { background: #0284c7; }
+        .btn-secondary { background: #334155; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger { background: #ef4444; color: white; padding: 0.5rem; border-radius: 0.375rem; }
+        .btn-danger:hover { background: #dc2626; }
+        .card { background: #1e293b; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+        .stat-card { background: #1e293b; padding: 1rem; border-radius: 0.5rem; border: 1px solid #334155; }
+        .stat-label { font-size: 0.875rem; color: #94a3b8; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; margin-top: 0.25rem; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f172a; padding: 0.75rem; text-align: left; font-size: 0.875rem; color: #94a3b8; border-bottom: 1px solid #334155; }
+        td { padding: 0.75rem; border-bottom: 1px solid #334155; font-size: 0.875rem; }
+        .badge { padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-daily { background: rgba(16,185,129,0.2); color: #10b981; }
+        .badge-monthly { background: rgba(14,165,233,0.2); color: #0ea5e9; }
+        .badge-paid { background: rgba(16,185,129,0.2); color: #10b981; }
+        .badge-unpaid { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .badge-partial { background: rgba(59,130,246,0.2); color: #3b82f6; }
+        .autocomplete-list { position: absolute; z-index: 50; background: #1e293b; border: 1px solid #334155; width: 100%; max-height: 200px; overflow-y: auto; display: none; border-radius: 0.375rem; margin-top: 0.25rem; }
+        .autocomplete-list.show { display: block; }
+        .autocomplete-item { padding: 0.5rem; cursor: pointer; border-bottom: 1px solid #334155; }
+        .autocomplete-item:hover, .autocomplete-item.active { background: #334155; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-container { background: #1e293b; padding: 1.5rem; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: white; padding: 1rem; border-radius: 0.5rem; z-index: 200; transform: translateY(100px); opacity: 0; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-error { background: #ef4444; }
+        .client-card { background: #0f172a; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #334155; cursor: pointer; transition: all 0.2s; }
+        .client-card:hover { border-color: #0ea5e9; }
+        .client-card.selected { border-color: #0ea5e9; background: rgba(14,165,233,0.1); }
+        .edit-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; width: 100%; font-size: 0.875rem; }
+        .hide-mobile { display: none; }
+        @media (min-width: 768px) { .hide-mobile { display: table-cell; } }
+        .dash-sub { background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600; }
+        .dash-sub.active { background:#3b82f6;border-color:#3b82f6;color:white; }
+        .zone-tag { background: rgba(100,116,139,0.2); color: #94a3b8; padding: 0.125rem 0.375rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 600; }
+        .badge-bal { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-dark-800 border-b border-dark-700 p-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-droplet"></i></div>
+                <div>
+                    <h1 class="text-xl font-bold text-blue-400">AQUA PACK</h1>
+                    <p class="text-xs text-gray-400">Water Delivery ERP</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-sm">
+                    <span id="statusDot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span id="statusText" class="text-gray-400">Offline Storage</span>
+                </div>
+                <button onclick="syncApp.manualSync()" class="btn-primary text-sm"><i class="fa-solid fa-sync"></i> Sync</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-dark-800 border-b border-dark-700 overflow-x-auto">
+        <div class="max-w-7xl mx-auto flex gap-1 p-2">
+            <button class="nav-item active px-4 py-2 rounded-lg text-sm font-medium" data-tab="dashboard"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="routes"><i class="fa-solid fa-clipboard-list mr-2"></i>Route Sheet</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="clients"><i class="fa-solid fa-users mr-2"></i>Clients</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="invoices"><i class="fa-solid fa-file-invoice mr-2"></i>Invoices</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="expenses"><i class="fa-solid fa-wallet mr-2"></i>Expenses</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="sync"><i class="fa-solid fa-cloud mr-2"></i>Sheet Sync</button>
+            <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-tab="staff"><i class="fa-solid fa-users mr-2"></i>Staff</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-2xl font-bold">Dashboard Overview</h2>
+                    <button id="balanceToggleBtn" onclick="dashboard.toggleAmounts()" 
+                        style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:0.85rem;">
+                        <i class="fa-solid fa-eye" id="balanceToggleIcon"></i>
+                        <span id="balanceToggleLabel">Hide</span>
+                    </button>
+                </div>
+                <div class="flex gap-2 mb-4">
+                    <button class="filter-btn active btn-secondary text-sm" data-filter="all" onclick="dashboard.setFilter('all')">All Time</button>
+                    <button class="filter-btn btn-secondary text-sm" data-filter="month" onclick="dashboard.setFilter('month')">Monthly</button>
+                    <button class="filter-btn btn-secondary text-sm" data-filter="daily" onclick="dashboard.setFilter('daily')">Daily</button>
+                    <input type="date" id="dateFilterSelect" class="input-field w-auto" style="display:none" onchange="dashboard.render()">
+                    <input type="month" id="monthFilterSelect" class="input-field w-auto" style="display:none" onchange="dashboard.render()">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div class="stat-card"><div class="stat-label">Total Sales</div><div class="stat-value text-blue-400" id="cardSales">PKR 0</div></div>
+                <div class="stat-card"><div class="stat-label">Bottles</div><div class="stat-value" id="cardBottles">0</div></div>
+                <div class="stat-card"><div class="stat-label">Expenses</div><div class="stat-value text-red-400" id="cardExpenses">PKR 0</div></div>
+                <div class="stat-card"><div class="stat-label">Balance</div><div class="stat-value text-amber-400" id="cardBalance">PKR 0</div></div>
+                <div class="stat-card"><div class="stat-label">Net Profit</div><div class="stat-value text-green-400" id="cardProfit">PKR 0</div></div>
+                <div class="stat-card"><div class="stat-label">Total Clients</div><div class="stat-value" id="cardClients">0</div></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card"><h3 class="font-semibold mb-4">Revenue & Net Profit Trend</h3><div style="height:250px"><canvas id="salesTrendChart"></canvas></div></div>
+                <div class="card"><h3 class="font-semibold mb-4">Deliveries by Payment Type</h3><div style="height:250px"><canvas id="bottlesBreakdownChart"></canvas></div></div>
+            </div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Top Outstanding Customers</h3>
+                <div class="table-container">
+                    <!-- Sub tabs -->
+                    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                        <button class="dash-sub active" data-sub="outstanding" onclick="dashboard.showSub('outstanding',this)">🏆 Top Outstanding</button>
+                        <button class="dash-sub" data-sub="aging" onclick="dashboard.showSub('aging',this)">📅 Aging Report</button>
+                        <button class="dash-sub" data-sub="pl" onclick="dashboard.showSub('pl',this)">📊 P&L Statement</button>
+                        <button class="dash-sub" data-sub="expchart" onclick="dashboard.showSub('expchart',this)">🥧 Expense Chart</button>
+                    </div>
+                    <!-- Outstanding -->
+                    <div id="sub-outstanding">
+                        <table><thead><tr><th>Client Name</th><th class="hide-mobile">Address</th><th>Type</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="topOutstandingBody"></tbody></table>
+                    </div>
+                    <!-- Aging Report -->
+                    <div id="sub-aging" style="display:none;">
+                        <div id="agingContent"></div>
+                    </div>
+                    <!-- P&L Statement -->
+                    <div id="sub-pl" style="display:none;">
+                        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+                            <input type="month" id="plMonth" class="input-field w-auto" value="" onchange="dashboard.renderPL()">
+                            <button onclick="dashboard.renderPL()" class="btn-secondary text-sm">Generate</button>
+                        </div>
+                        <div id="plContent"></div>
+                    </div>
+                    <!-- Expense Chart -->
+                    <div id="sub-expchart" style="display:none;">
+                        <div style="height:260px;"><canvas id="expensePieChart"></canvas></div>
+                        <div id="expChartLegend" style="margin-top:12px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Sheet Tab -->
+        <div id="routes" class="tab-content">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold mb-2">Daily Route Sheet</h2>
+                <p class="text-gray-400 text-sm">Record & manage delivery logs</p>
+            </div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">New Route Entry</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div><label class="block text-sm text-gray-400 mb-1">Date *</label><input type="date" id="routeDate" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Vehicle *</label><input type="text" id="routeVehicle" class="input-field" placeholder="e.g. TB 102"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Driver *</label><input type="text" id="routeDriver" class="input-field" placeholder="Driver name"></div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div><label class="block text-sm text-gray-400 mb-1">Fuel</label><input type="number" id="routeFuel" class="input-field" value="0"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Food</label><input type="number" id="routeFood" class="input-field" value="0"></div>
+
+                    <div><label class="block text-sm text-gray-400 mb-1">Other</label><input type="number" id="routeOther" class="input-field" value="0"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Start KM</label><input type="number" id="routeStartKm" class="input-field" value="0"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">End KM</label><input type="number" id="routeEndKm" class="input-field" value="0"></div>
+                </div>
+                <button onclick="routeSheet.clearForm()" class="btn-secondary"><i class="fa-solid fa-rotate-right"></i> Clear Form</button>
+            </div>
+
+            <div class="card">
+                <h3 class="font-semibold mb-4">Add Client to Route</h3>
+                <div class="relative mb-4">
+                    <input type="text" id="clientSearchAdd" class="input-field" placeholder="Search client by name, address, or phone..." autocomplete="off">
+                    <div id="clientSearchSuggestions" class="autocomplete-list"></div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Client</th><th class="hide-mobile">Address</th><th>Qty</th><th>Price</th><th>Total</th><th>Type</th><th>Received</th><th>Balance</th><th>Actions</th></tr></thead>
+                        <tbody id="routeEntryRows"></tbody>
+                    </table>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div class="stat-card"><div class="stat-label">Total Qty</div><div class="stat-value" id="routeTotalQty">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Cash Collected</div><div class="stat-value text-green-400" id="routeTotalRecv">PKR 0</div></div>
+                    <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value text-red-400" id="routeTotalExpenses">PKR 0</div></div>
+                    <div class="stat-card"><div class="stat-label">Credit/Balance</div><div class="stat-value text-amber-400" id="routeTotalBalance">PKR 0</div></div>
+                </div>
+                <div id="driverReconciliationBox" class="mt-6 p-4 bg-dark-900 rounded-lg" style="display:none">
+                    <h4 class="font-semibold mb-3">Driver Cash Reconciliation</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+                        <div><span class="text-gray-400">Cash In:</span> <span id="recCashIn" class="font-bold">PKR 0</span></div>
+                        <div><span class="text-gray-400">Expenses:</span> <span id="recExpenses" class="font-bold text-red-400">PKR 0</span></div>
+                        <div><span class="text-gray-400">KM Driven:</span> <span id="recKm" class="font-bold">0 km</span></div>
+                        <div><span class="text-gray-400">Net Due:</span> <span id="recNet" class="font-bold">PKR 0</span></div>
+                    </div>
+                    <div class="pt-3 border-t border-dark-700">
+                        <span class="text-gray-400">Driver owes you: </span>
+                        <span id="routeNetCash" class="text-xl font-bold text-green-400">PKR 0</span>
+                        <span id="routeNetCashLabel" class="text-sm text-gray-400 ml-2"></span>
+                    </div>
+                </div>
+                <button onclick="routeSheet.save()" class="btn-primary w-full justify-center mt-6"><i class="fa-solid fa-save"></i> Save Route Sheet</button>
+            </div>
+
+            <div class="card">
+                <h3 class="font-semibold mb-4">Saved Route Records</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="routeArchiveSearch" class="input-field" placeholder="Search by date, driver, vehicle..." oninput="routeSheet.renderArchive()">
+                    <input type="date" id="routeArchiveDateFrom" class="input-field" onchange="routeSheet.renderArchive()">
+                    <input type="date" id="routeArchiveDateTo" class="input-field" onchange="routeSheet.renderArchive()">
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Date</th><th class="hide-mobile">Driver / Vehicle</th><th>Clients</th><th>Bottles</th><th>Total Value</th><th>Cash In</th><th>Expenses</th><th>Net Cash</th><th>Balance Added</th><th>Actions</th></tr></thead>
+                        <tbody id="routeArchiveBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Tab -->
+        <div id="clients" class="tab-content">
+            <div class="mb-6"><h2 class="text-2xl font-bold mb-2">Client Ledger</h2><p class="text-gray-400 text-sm">Manage client accounts & balances</p></div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Add / Edit Client</h3>
+                <input type="hidden" id="editClientId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div><label class="block text-sm text-gray-400 mb-1">Name *</label><input type="text" id="clientName" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Type</label><select id="clientType" class="input-field"><option>Daily</option><option>Monthly</option></select></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Phone</label><input type="text" id="clientPhone" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Address / Area</label><input type="text" id="clientAddress" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Rate (PKR)</label><input type="number" id="clientRate" class="input-field" value="200"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Security Deposit (PKR)</label><input type="number" id="clientSecurity" class="input-field" value="0" placeholder="0"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Current Balance</label><input type="number" id="clientBalance" class="input-field" value="0"></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clientsTab.save()" id="btnSaveClient" class="btn-primary"><i class="fa-solid fa-save"></i> Save Client</button>
+                    <button onclick="clientsTab.clearForm()" class="btn-secondary">Cancel</button>
+                    <button onclick="clientsTab.bulkImport()" class="btn-secondary ml-auto"><i class="fa-solid fa-file-import"></i> Import 79 Clients</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <button class="filter-btn active btn-secondary text-sm" data-cfilter="all" onclick="clientsTab.setFilter('all')">All</button>
+                    <button class="filter-btn btn-secondary text-sm" data-cfilter="unpaid" onclick="clientsTab.setFilter('unpaid')"><span style="color:#f59e0b">&#9679;</span> Unpaid</button>
+                    <button class="filter-btn btn-secondary text-sm" data-cfilter="paid" onclick="clientsTab.setFilter('paid')"><span style="color:#10b981">&#9679;</span> Paid / Clear</button>
+                    <button class="filter-btn btn-secondary text-sm" data-cfilter="monthly" onclick="clientsTab.setFilter('monthly')"><i class="fa-solid fa-calendar-days"></i> By Month</button>
+                    <input type="month" id="clientMonthFilter" class="input-field" style="display:none;width:auto;" onchange="clientsTab.renderList()">
+                </div>
+                <input type="text" id="clientSearchQuery" class="input-field mb-4" placeholder="Search clients..." oninput="clientsTab.renderList()">
+                <div class="table-container">
+                    <table><thead><tr><th>Name</th><th>Type</th><th class="hide-mobile">Address</th><th class="hide-mobile">Phone</th><th>Rate</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="clientTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoices Tab -->
+        <div id="invoices" class="tab-content">
+            <div class="mb-6"><h2 class="text-2xl font-bold mb-2">Invoice Management</h2><p class="text-gray-400 text-sm">Generate & export monthly invoices</p></div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Generate Monthly Invoice</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="md:col-span-4">
+                        <label class="block text-sm text-gray-400 mb-1">Select Client (Scroll & Click)</label>
+                        <div class="relative">
+                            <input type="text" id="invoiceClientSearch" class="input-field" placeholder="Search client..." autocomplete="off">
+                            <div id="invoiceClientSuggestions" class="autocomplete-list"></div>
+                        </div>
+                        <div id="invoiceClientGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2 max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Start Date</label><input type="date" id="invoiceDateStart" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">End Date</label><input type="date" id="invoiceDateEnd" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Issue Date</label><input type="date" id="invoiceIssueDate" class="input-field"></div>
+                    <div class="flex items-end gap-2">
+                        <button onclick="invoicesTab.quickMonthSet('prev')" class="btn-secondary text-sm">Prev Month</button>
+                        <button onclick="invoicesTab.quickMonthSet('curr')" class="btn-secondary text-sm">Curr Month</button>
+                    </div>
+                </div>
+                <button onclick="invoicesTab.generateInvoice()" class="btn-primary w-full justify-center"><i class="fa-solid fa-file-invoice"></i> Generate Invoice</button>
+            </div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Generated Invoices</h3>
+                <div class="table-container">
+                    <table><thead><tr><th>Invoice #</th><th>Client</th><th class="hide-mobile">Period</th><th>Qty</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invoiceTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses Tab -->
+        <div id="expenses" class="tab-content">
+            <div class="mb-6"><h2 class="text-2xl font-bold mb-2">Operational Expenses</h2><p class="text-gray-400 text-sm">Track fuel, wages & overheads</p></div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Log Operations Expense</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div><label class="block text-sm text-gray-400 mb-1">Date *</label><input type="date" id="expenseDate" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Category</label><select id="expenseCategory" class="input-field"><option>Fuel / Diesel</option><option>Vehicle Maintenance</option><option>Water Source Filling</option><option>Taxes / Challan</option><option>Staff Wages</option><option>Food</option><option>Other</option></select></div>
+                    <div class="md:col-span-2"><label class="block text-sm text-gray-400 mb-1">Details</label><input type="text" id="expenseDetails" class="input-field"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Amount (PKR) *</label><input type="number" id="expenseAmount" class="input-field"></div>
+                </div>
+                <button onclick="expensesTab.save()" class="btn-primary"><i class="fa-solid fa-plus"></i> Record Expense</button>
+            </div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">Operational Expenses Ledger</h3>
+                <div class="table-container">
+                    <table><thead><tr><th>Date</th><th>Category</th><th>Details</th><th>Amount</th><th>Actions</th></tr></thead><tbody id="expenseTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sheet Sync Tab -->
+        <div id="sync" class="tab-content">
+            <div class="mb-6"><h2 class="text-2xl font-bold mb-2">Google Sheets Sync</h2><p class="text-gray-400 text-sm">Cloud backup & data integration</p></div>
+            <div class="card">
+                <div class="flex items-center gap-2 mb-4"><span id="syncStatusDot" class="w-2 h-2 rounded-full bg-red-500"></span><span id="syncStatusText" class="text-gray-400">Offline Storage</span></div>
+                <div class="mb-4"><label class="block text-sm text-gray-400 mb-1">Web App URL</label><input type="text" id="webAppUrl" class="input-field" placeholder="Paste your Google Apps Script Web App URL"></div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="syncApp.saveConfig()" class="btn-primary">Save URL & Test</button>
+                    <button onclick="syncApp.clearConfig()" class="btn-secondary">Reset</button>
+                    <button onclick="syncApp.pullFromSheets()" class="btn-secondary">Pull Data</button>
+                    <button onclick="syncApp.pushToSheets()" class="btn-secondary">Push Data</button>
+                </div>
+                <div class="mt-6 p-4 bg-dark-900 rounded-lg text-sm text-gray-400">
+                    <p class="font-semibold mb-2">How to connect:</p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Open your Google Sheet → Extensions → Apps Script</li>
+                        <li>Paste the Code.gs code (deploy as Web App)</li>
+                        <li>Copy the generated URL and paste it above</li>
+                        <li>Auto-sync runs every 45 seconds when connected</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Local Backup & Restore -->
+            <div class="card">
+                <h3 class="font-semibold mb-1">&#128190; Local Backup &amp; Restore</h3>
+                <p class="text-gray-400 text-sm mb-4">Download all your data as a JSON file to your phone or laptop. Restore it anytime if something goes wrong.</p>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button onclick="backupApp.download()" class="btn-primary"><i class="fa-solid fa-download"></i> Download Backup</button>
+                    <label class="btn-secondary cursor-pointer flex items-center gap-2"><i class="fa-solid fa-upload"></i> Restore from Backup<input type="file" id="restoreFileInput" accept=".json" style="display:none" onchange="backupApp.restore(this)"></label>
+                </div>
+                <div id="backupStatus" class="mt-4 text-sm hidden"></div>
+                <div class="mt-4 p-3 bg-dark-900 rounded-lg text-xs text-gray-500">
+                    <i class="fa-solid fa-circle-info mr-1 text-blue-400"></i>
+                    Backup includes all clients, routes, invoices &amp; expenses. Restore will <span class="text-amber-400 font-semibold">overwrite</span> current data &mdash; download a fresh backup first before restoring.
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Tab -->
+        <div id="staff" class="tab-content">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1">Staff & Salaries</h2>
+            <p class="text-gray-400 text-sm">Manage driver salaries, plant workers, and security deposits from clients.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value" id="staffCount">0</div></div>
+            <div class="stat-card"><div class="stat-label">Monthly Salary Bill</div><div class="stat-value text-red-400" id="staffTotalSalary">PKR 0</div></div>
+            <div class="stat-card"><div class="stat-label">Security Deposits Held</div><div class="stat-value text-green-400" id="staffTotalSecurity">PKR 0</div></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Add Staff -->
+            <div class="card">
+                <h3 class="font-semibold mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Add Staff Member</h3>
+                <div class="space-y-3">
+                    <div><label class="block text-sm text-gray-400 mb-1">Full Name</label><input type="text" id="staffName" class="input-field" placeholder="e.g. Muhammad Ali"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Role</label>
+                        <select id="staffRole" class="input-field">
+                            <option>Driver</option>
+                            <option>Plant Worker</option>
+                            <option>Guard / Security</option>
+                            <option>Helper</option>
+                            <option>Manager</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Monthly Salary (PKR)</label><input type="number" id="staffSalary" class="input-field" value="0"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Phone</label><input type="text" id="staffPhone" class="input-field" placeholder="03xx-xxxxxxx"></div>
+                    <div><label class="block text-sm text-gray-400 mb-1">Join Date</label><input type="date" id="staffJoinDate" class="input-field"></div>
+                    <div class="flex gap-2">
+                        <button onclick="staffTab.save()" class="btn-primary flex-1"><i class="fa-solid fa-save"></i> Save Staff</button>
+                        <button onclick="staffTab.clearForm()" class="btn-secondary"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            <!-- Staff List -->
+            <div class="card">
+                <h3 class="font-semibold mb-4"><i class="fa-solid fa-list mr-2"></i>Staff Members</h3>
+                <div id="staffList"><p class="text-gray-400 text-sm">No staff added yet.</p></div>
+            </div>
+        </div>
+        <!-- Salary Payment Records -->
+        <div class="card mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold"><i class="fa-solid fa-money-bill-wave mr-2"></i>Salary Payment Records</h3>
+                <button onclick="staffTab.showPaySalary()" class="btn-primary text-sm"><i class="fa-solid fa-plus"></i> Record Payment</button>
+            </div>
+            <div class="table-container">
+                <table><thead><tr><th>Date</th><th>Staff</th><th>Role</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead>
+                <tbody id="salaryPaymentsList"></tbody></table>
+            </div>
+        </div>
+        <!-- Security Deposits -->
+        <div class="card mt-6">
+            <h3 class="font-semibold mb-4"><i class="fa-solid fa-shield mr-2"></i>Client Security Deposits</h3>
+            <div class="table-container">
+                <table><thead><tr><th>Client</th><th>Address</th><th>Security Amount</th><th>Date Joined</th></tr></thead>
+                <tbody id="securityDepositsList"></tbody></table>
+            </div>
+        </div>
+    </div>
+    </main>
+
+
+    <!-- Invoice Modal -->
+    <div id="invoiceModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Invoice Preview</h3>
+                <button onclick="invoicesTab.closeModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div id="invoicePdfArea" class="bg-white text-black p-6 rounded-lg mb-4"></div>
+            <div class="flex flex-wrap gap-2 justify-end">
+                <button id="invoicePartialBtn" onclick="invoicesTab.recordPartialPayment()" class="btn-secondary"><i class="fa-solid fa-money-bill-wave"></i> Record Payment</button>
+                <button id="invoiceMarkPaidBtn" onclick="invoicesTab.markAsPaid()" class="btn-primary"><i class="fa-solid fa-check"></i> Mark as Paid</button>
+                <button onclick="invoicesTab.exportPdf()" class="btn-secondary"><i class="fa-solid fa-print"></i> Print / PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Profile Modal -->
+    <div id="clientProfileModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Client Ledger</h3>
+                <button onclick="document.getElementById('clientProfileModal').classList.remove('show')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div id="clientProfileContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-xl"></i>
+        <span id="toastMsg">Action completed successfully</span>
+    </div>
+
+    <script src="code.js"></script>
+</body>
+</html>
